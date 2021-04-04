@@ -66,8 +66,6 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     mapping(IERC20 => bool) public poolExistence;
     // Used to determine wether a token has already been added.
     mapping(IERC20 => bool) public tokenExistence;
-	// Modifier to restrict access to owner and masterChef address.
-
 
     // Modifier to allow only new pools being added.
     modifier nonDuplicated(IERC20 _lpToken) {
