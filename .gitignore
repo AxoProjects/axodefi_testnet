@@ -13,6 +13,8 @@ src/abis/
 node_modules/
 
 # Configs/Deployment
-*.js
-*.json
+migrations/
+package-lock.json
+package.json
+truffle-config.js
 
