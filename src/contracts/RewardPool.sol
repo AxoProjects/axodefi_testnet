@@ -12,13 +12,39 @@ import "./libs/IRewardPool.sol";
 //import "./libs/SafeBEP20.sol";
 //import "./libs/IBEP20.sol";
 
+/*
+Note: This contract is ownable, therefor the owner wields a good portion of power.
+The owner will be able to initialize the reward pool.
+Initiate emergency transfer to masterChef contract.
+Emergency swap to BUSD.
+Emergency remove liquidity.
+Even if fraudalent swapping is caused by the owner, he will only be able to transfer BUSD away.
+The BUSD address is a set constant and not changeable.
+Thus the owner has only the power to withhold all the funds in this contract
+but can only transfer them to the masterChef contract.
+After contract is proven to be bug free, ownership will be transferred to another contract 
+to automatically govern this one and restrict access to the emergency functionality.
 
-
+This contract uses the UniSwapRouter interfaces to automatically: 
+    removeAllLiquidity of LP tokens
+    swap all tokens to BUSD
+    swap 20% to Lotl
+    burn that lotl
+    transfer the remaining BUSD to MasterChef
+    initiate reward distribution
+*/
 
 contract RewardPool is Ownable, Constants, IRewardPool {
     using SafeERC20 for IERC20;
     IMasterChef public chef;
     address public lotlToken;
+
+    // Visibility will change after testing is done.
+    // Only functions ownable will be:
+    // swapToBusd
+    // removeLiquidity
+    // processFees
+    // transferAllBUSD
 
     // Tokens associated with the LP pair. 
     struct LpTokenPair {
@@ -26,7 +52,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
         IERC20 tokenB;
 
     }
-    // All differen LP tokens registered.
+    // All different LP tokens registered.
     IERC20[] public lptoken;
 	// All different tokens registered.
 	IERC20[] public tokens; 
@@ -156,9 +182,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     }
 
     // This function will be called every 7 days.
-    // Turns all LP tokens into normal tokens and turns them to BUSD.
-    // Then transfers them to the MasterChef contract and initiates the reward pool distribution.
-    // Reverts on failure to transfer.
+    // Processes the fess.
     function processFees() public onlyOwner{
 
     	//removeAllLiquidity;
@@ -168,6 +192,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     	chef.calculateRewardPool();
     }
 
+    // Transfers all BUSD to MasterChef
     function transferAllBUSD () public onlyOwner {
         uint256 amount = IERC20(busdAddr).balanceOf(address(this));
         IERC20(busdAddr).approve(address(chef), amount);
@@ -175,6 +200,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     }
     
 
+    // Swaps 20% of the BUSD to Lotl and burns them.
     function burn20Percent() public onlyOwner {
         uint256 toBurn = IERC20(busdAddr).balanceOf(address(this)) / 5;
         swapToLotl(toBurn);
@@ -182,6 +208,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     }
     
 
+    // Swaps all LP tokens to their composits.
     function removeAllLiquidity () public onlyOwner {
         for(uint8 i; i < lptoken.length; i++)
         {
@@ -193,6 +220,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
         }
     }
 
+    // Swaps all tokens in the contract to BUSD.
     function swapAllToBUSD () public onlyOwner {
         for(uint8 i; i < tokens.length; i++){
             uint256 tokenAmount = tokens[i].balanceOf(address(this));

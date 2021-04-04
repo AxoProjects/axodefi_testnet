@@ -19,15 +19,10 @@ import "./LotlToken.sol";
 
 
 
-// Copied and modified from GooseDefi code:
+// Forkend and modified from GooseDefi code:
 // https://github.com/goosedefi/goose-contracts/blob/master/contracts/MasterChefV2.sol
-//
 // MasterChef is the master of Lotl. He can make Lotl and he is a fair guy.
-//
-// Note that it's ownable and the owner wields tremendous power. The ownership
-// will be transferred to a govenance smart contract once LOTL is sufficiently
-// distributed and the community can show to govern itself.
-//
+// Note that it's ownable and the owner can start the minting once, halve the emission rate and add pools.
 // Have fun reading it. Hopefully it's bug-free. Satan bless.
 
 contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
@@ -59,13 +54,11 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         //  1. First of, we reserve 30% of all minted LOTL to our reward pool. ('lotlRewardPool')
         //  2. We send 90% of all taxes paid to our RewardPool contract.
         //  3. All fees will be swapped to BUSD and sent back to the MasterChef contract.
-        //  4. 20% of that BUSD will be burned at burnTokens(amount)
-        //  5. The remainder will then go into the 'busdRewardPool'.
-        //  6. Then we use calculateRewardPool to calculate all rewards per share for each user and sum them up for each user across all pools he staked in.
-        //  7. rewardPerShare = 1 * pool.allocPoint * timeReward * user.amount / totalAllocPoint / lpSupply
-        //  8. Then to get your actual reward you need to withdraw your rewards before the next reward pool is distributed or else they will be burned.
-        //  9. Rewards are paid out in the function 'withdrawRewards' and are finally calculated as follows.
-        //  10. reward = totalRewardPool * user.rewardPoolShare / totalTimeAlloc 
+        //  4. Then we use calculateRewardPool to calculate all rewards per share for each user and sum them up for each user across all pools he staked in.
+        //  5. rewardPerShare = 1 * pool.allocPoint * timeReward * user.amount / totalAllocPoint / lpSupply
+        //  6. Then to get your actual reward you need to withdraw your rewards before the next reward pool is distributed or else they will be burned.
+        //  7. Rewards are paid out in the function 'withdrawRewards' and are finally calculated as follows.
+        //  8. reward = totalRewardPool * user.rewardPoolShare / totalTimeAlloc 
      
 
 
@@ -74,8 +67,6 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
 
     // Info of each pool.
     struct PoolInfo {
-        //CHANGE FOR BSC
-        //IBEP20 lpToken;            // Address of LP token contract.
         IERC20 lpToken;             // Address of LP token contract.
         uint8 allocPoint;           // How many allocation points assigned to this pool. LOTLs to distribute per block.
         uint256 lastRewardBlock;     // Last block number that LOTLs distribution occurs.
@@ -86,7 +77,7 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
     }
 
     // Info for the reward pool.
-    // All rewards that haven't been claimed until the next reward distribution will be burned. 
+    // All rewards that haven't been claimed until the next reward distribution will be nulled and added to the next distribution. 
     struct Rewards {
         uint32 totalTimeAlloc;      // Total time factor for all stakes.
         uint256 amountBUSD;         // BUSD to distribute among all stakers.
