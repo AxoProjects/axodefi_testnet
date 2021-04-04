@@ -1,0 +1,474 @@
+{
+  "contractName": "IRewardPool",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "_lpToken",
+          "type": "address"
+        },
+        {
+          "internalType": "contract IERC20",
+          "name": "_tokenA",
+          "type": "address"
+        },
+        {
+          "internalType": "contract IERC20",
+          "name": "_tokenB",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "_isLPToken",
+          "type": "bool"
+        }
+      ],
+      "name": "addLpToken",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "metadata": "{\"compiler\":{\"version\":\"0.8.0+commit.c7dfd78e\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"_lpToken\",\"type\":\"address\"},{\"internalType\":\"contract IERC20\",\"name\":\"_tokenA\",\"type\":\"address\"},{\"internalType\":\"contract IERC20\",\"name\":\"_tokenB\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"_isLPToken\",\"type\":\"bool\"}],\"name\":\"addLpToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"/C/Users/rostan/development/axo_swap/ropsten_testnet/deploy_masterchef/src/contracts/libs/IRewardPool.sol\":\"IRewardPool\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"/C/Users/rostan/development/axo_swap/ropsten_testnet/deploy_masterchef/src/contracts/libs/IRewardPool.sol\":{\"keccak256\":\"0x4a54432ed78ce4420c4b2a69204948faf831bc74289851a4e8d162902217153b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://760d9f5c35eb1921ce87997cc4794637fbe3c7d692fc6c7a9b42609f65ef1ddc\",\"dweb:/ipfs/QmZbGeUQbkEccqdF3RcLDCDgQazaXqQ4Tc8SPMbaHPPMMt\"]},\"@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xf8e8d118a7a8b2e134181f7da655f6266aa3a0f9134b2605747139fcb0c5d835\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://9ec48567e7ad06acb670980d5cdf3fd7f3949bf12894f02d68c3bb43e75aa84f\",\"dweb:/ipfs/QmaG3R2J9cz92YT77vFjYrjMNU2wHp4ypwYD62HqDUqS5U\"]}},\"version\":1}",
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "immutableReferences": {},
+  "sourceMap": "",
+  "deployedSourceMap": "",
+  "source": "// SPDX-License-Identifier: MIT\r\n\r\npragma solidity ^0.8.0;\r\n\r\n//import \"./IBEP20.sol\";\r\nimport \"@openzeppelin/contracts/token/ERC20/IERC20.sol\";\r\n\r\ninterface IRewardPool{\r\n    function addLpToken(IERC20 _lpToken, IERC20 _tokenA, IERC20 _tokenB, bool _isLPToken) external;\r\n}",
+  "sourcePath": "C:\\Users\\rostan\\development\\axo_swap\\ropsten_testnet\\deploy_masterchef\\src\\contracts\\libs\\IRewardPool.sol",
+  "ast": {
+    "absolutePath": "/C/Users/rostan/development/axo_swap/ropsten_testnet/deploy_masterchef/src/contracts/libs/IRewardPool.sol",
+    "exportedSymbols": {
+      "IERC20": [
+        3563
+      ],
+      "IRewardPool": [
+        2834
+      ]
+    },
+    "id": 2835,
+    "license": "MIT",
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 2818,
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "35:23:8"
+      },
+      {
+        "absolutePath": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "file": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "id": 2819,
+        "nodeType": "ImportDirective",
+        "scope": 2835,
+        "sourceUnit": 3564,
+        "src": "88:56:8",
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "abstract": false,
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "id": 2834,
+        "linearizedBaseContracts": [
+          2834
+        ],
+        "name": "IRewardPool",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "functionSelector": "a16b583e",
+            "id": 2833,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "addLpToken",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 2831,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2822,
+                  "mutability": "mutable",
+                  "name": "_lpToken",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2833,
+                  "src": "196:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_IERC20_$3563",
+                    "typeString": "contract IERC20"
+                  },
+                  "typeName": {
+                    "id": 2821,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2820,
+                      "name": "IERC20",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 3563,
+                      "src": "196:6:8"
+                    },
+                    "referencedDeclaration": 3563,
+                    "src": "196:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_IERC20_$3563",
+                      "typeString": "contract IERC20"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2825,
+                  "mutability": "mutable",
+                  "name": "_tokenA",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2833,
+                  "src": "213:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_IERC20_$3563",
+                    "typeString": "contract IERC20"
+                  },
+                  "typeName": {
+                    "id": 2824,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2823,
+                      "name": "IERC20",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 3563,
+                      "src": "213:6:8"
+                    },
+                    "referencedDeclaration": 3563,
+                    "src": "213:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_IERC20_$3563",
+                      "typeString": "contract IERC20"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2828,
+                  "mutability": "mutable",
+                  "name": "_tokenB",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2833,
+                  "src": "229:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_IERC20_$3563",
+                    "typeString": "contract IERC20"
+                  },
+                  "typeName": {
+                    "id": 2827,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2826,
+                      "name": "IERC20",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 3563,
+                      "src": "229:6:8"
+                    },
+                    "referencedDeclaration": 3563,
+                    "src": "229:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_IERC20_$3563",
+                      "typeString": "contract IERC20"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2830,
+                  "mutability": "mutable",
+                  "name": "_isLPToken",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2833,
+                  "src": "245:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 2829,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "245:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "195:66:8"
+            },
+            "returnParameters": {
+              "id": 2832,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "270:0:8"
+            },
+            "scope": 2834,
+            "src": "176:95:8",
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "scope": 2835,
+        "src": "148:126:8"
+      }
+    ],
+    "src": "35:239:8"
+  },
+  "legacyAST": {
+    "absolutePath": "/C/Users/rostan/development/axo_swap/ropsten_testnet/deploy_masterchef/src/contracts/libs/IRewardPool.sol",
+    "exportedSymbols": {
+      "IERC20": [
+        3563
+      ],
+      "IRewardPool": [
+        2834
+      ]
+    },
+    "id": 2835,
+    "license": "MIT",
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 2818,
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "35:23:8"
+      },
+      {
+        "absolutePath": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "file": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "id": 2819,
+        "nodeType": "ImportDirective",
+        "scope": 2835,
+        "sourceUnit": 3564,
+        "src": "88:56:8",
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "abstract": false,
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "id": 2834,
+        "linearizedBaseContracts": [
+          2834
+        ],
+        "name": "IRewardPool",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "functionSelector": "a16b583e",
+            "id": 2833,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "addLpToken",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 2831,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2822,
+                  "mutability": "mutable",
+                  "name": "_lpToken",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2833,
+                  "src": "196:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_IERC20_$3563",
+                    "typeString": "contract IERC20"
+                  },
+                  "typeName": {
+                    "id": 2821,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2820,
+                      "name": "IERC20",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 3563,
+                      "src": "196:6:8"
+                    },
+                    "referencedDeclaration": 3563,
+                    "src": "196:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_IERC20_$3563",
+                      "typeString": "contract IERC20"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2825,
+                  "mutability": "mutable",
+                  "name": "_tokenA",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2833,
+                  "src": "213:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_IERC20_$3563",
+                    "typeString": "contract IERC20"
+                  },
+                  "typeName": {
+                    "id": 2824,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2823,
+                      "name": "IERC20",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 3563,
+                      "src": "213:6:8"
+                    },
+                    "referencedDeclaration": 3563,
+                    "src": "213:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_IERC20_$3563",
+                      "typeString": "contract IERC20"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2828,
+                  "mutability": "mutable",
+                  "name": "_tokenB",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2833,
+                  "src": "229:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_IERC20_$3563",
+                    "typeString": "contract IERC20"
+                  },
+                  "typeName": {
+                    "id": 2827,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2826,
+                      "name": "IERC20",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 3563,
+                      "src": "229:6:8"
+                    },
+                    "referencedDeclaration": 3563,
+                    "src": "229:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_IERC20_$3563",
+                      "typeString": "contract IERC20"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2830,
+                  "mutability": "mutable",
+                  "name": "_isLPToken",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2833,
+                  "src": "245:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 2829,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "245:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "195:66:8"
+            },
+            "returnParameters": {
+              "id": 2832,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "270:0:8"
+            },
+            "scope": 2834,
+            "src": "176:95:8",
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "scope": 2835,
+        "src": "148:126:8"
+      }
+    ],
+    "src": "35:239:8"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.8.0+commit.c7dfd78e.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.2.3",
+  "updatedAt": "2021-04-03T15:08:24.603Z",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  }
+}
