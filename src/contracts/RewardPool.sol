@@ -45,6 +45,8 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     // removeLiquidity
     // processFees
     // transferAllBUSD
+    // initiateRewards
+    // setRouterPath
 
     // Tokens associated with the LP pair. 
     struct LpTokenPair {
@@ -107,7 +109,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
 
 
   	// Function to add router paths, needed if new LP pairs with new tokens are added.
-  	function setRouterPath(address inputToken, address outputToken, address[] calldata _path, bool overwrite) external onlyOwner {
+  	function setRouterPath(address inputToken, address outputToken, address[] calldata _path, bool overwrite) external override onlyOwner {
         address[] storage path = paths[inputToken][outputToken];
         uint256 length = _path.length;
         if (!overwrite) {
@@ -128,7 +130,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
   	
 
     // Given X input tokens, return Y output tokens without concern about minimum/slippage.
-    function swapToBusd(IERC20 _inputToken, uint256 _amount) onlyOwner {
+    function swapToBusd(IERC20 _inputToken, uint256 _amount) public onlyOwner {
         _inputToken.approve(routerAddr, _amount);
         IPancakeRouter02(routerAddr).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amount,
@@ -183,13 +185,12 @@ contract RewardPool is Ownable, Constants, IRewardPool {
 
     // This function will be called every 7 days.
     // Processes the fess.
-    function processFees() public onlyOwner{
-
-    	//removeAllLiquidity;
-        //swapAllToBUSD;
-        //burn20Percent;
-        //transferAllBUSD;
-    	chef.calculateRewardPool();
+    function processFees() public override onlyOwner{
+    	removeAllLiquidity;
+        swapAllToBUSD;
+        burn20Percent;
+        transferAllBUSD;
+        initiateRewards;
     }
 
     // Transfers all BUSD to MasterChef
@@ -229,6 +230,12 @@ contract RewardPool is Ownable, Constants, IRewardPool {
             }
         }
     }
+
+    // Initiates the reward calculation in the MasterChefContract
+    function initiateRewards () public onlyOwner {
+        chef.calculateRewardPool();
+    }
+    
     
 
    	// Add new LP tokens and tokens to the existing storage, can only be called via MasterChef contract.
