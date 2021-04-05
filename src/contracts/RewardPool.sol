@@ -223,7 +223,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     function swapAllToBUSD () public onlyOwner {
         for(uint8 i; i < tokens.length; i++){
             uint256 tokenAmount = tokens[i].balanceOf(address(this));
-            if(tokenAmount > 0 && tokens[i] != IERC20(busdAddr)){
+            if(tokenAmount / 1e18 > 0 && tokens[i] != IERC20(busdAddr)){
                 swapToBusd(tokens[i], tokenAmount);
             }
         }
