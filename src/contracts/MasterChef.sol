@@ -234,6 +234,7 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         }
 
         if(lotlPerBlock == 0){
+            pool.lastRewardBlock = block.number;
             return;
         }
 
