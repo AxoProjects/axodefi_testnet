@@ -61,7 +61,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     // Swapping paths.
     mapping(address => mapping(address => address[])) paths;
 	// Maps the LP pair to the tokens 
-	mapping (IERC20 => LpTokenPair) lpPairs;
+	mapping (IERC20 => LpTokenPair) public lpPairs;
 	// Used to determine wether a pool has already been added.
     mapping(IERC20 => bool) public poolExistence;
     // Used to determine wether a token has already been added.
@@ -128,10 +128,10 @@ contract RewardPool is Ownable, Constants, IRewardPool {
   	
 
     // Given X input tokens, return Y output tokens without concern about minimum/slippage.
-    function swapToBusd(IERC20 _inputToken, uint256 _amount) public onlyOwner {
-        _inputToken.approve(routerAddr, _amount);
+    function swapToBusd(IERC20 _inputToken) public onlyOwner {
+        _inputToken.approve(routerAddr, _inputToken.balanceOf(address(this)));
         IPancakeRouter02(routerAddr).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            _amount,
+            _inputToken.balanceOf(address(this)),
             0,
             getRouterPath(address(_inputToken), busdAddr),
             address(this),
@@ -140,10 +140,10 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     }
 
     // Swaps BUSD to LOTL without concern about minimum/slippage.
-    function swapToLotl(uint256 _amount) public onlyOwner {
-        IERC20(busdAddr).approve(routerAddr, _amount);
+    function swapToLotl() public onlyOwner {
+        IERC20(busdAddr).approve(routerAddr, IERC20(busdAddr).balanceOf(address(this)) / 5);
         IPancakeRouter02(routerAddr).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            _amount,
+            IERC20(busdAddr).balanceOf(address(this)) / 5,
             0,
             getRouterPath(busdAddr, lotlToken),
             address(this),
@@ -151,23 +151,15 @@ contract RewardPool is Ownable, Constants, IRewardPool {
         );
     }
 
-    // Burns LOTL
-    function burnLotl() public {
-        uint256 amount = IERC20(lotlToken).balanceOf(address(this));
-        IERC20(lotlToken).transfer(burnAddr,amount);
-        emit BurnLotl(lotlToken, amount);
-    }
-    
-
     // Given X input LP tokens, returns X,Y output tokens without concern about minimum/slippage.
-    function removeLiquidity(IERC20 _lpToken, uint256 _amount) public onlyOwner {
-        _lpToken.approve(routerAddr, _amount);
+    function removeLiquidity(IERC20 _lpToken) public onlyOwner {
+        _lpToken.approve(routerAddr, _lpToken.balanceOf(address(this)));
     	IERC20 _tokenA = lpPairs[_lpToken].tokenA;
     	IERC20 _tokenB = lpPairs[_lpToken].tokenB;
         IPancakeRouter02(routerAddr).removeLiquidity(
             address(_tokenA),
             address(_tokenB),
-            _amount,
+            _lpToken.balanceOf(address(this)),
             0,
             0,
             address(this),
@@ -201,8 +193,7 @@ contract RewardPool is Ownable, Constants, IRewardPool {
 
     // Swaps 20% of the BUSD to Lotl and burns them.
     function burn20Percent() public onlyOwner {
-        uint256 toBurn = IERC20(busdAddr).balanceOf(address(this)) / 5;
-        swapToLotl(toBurn);
+        swapToLotl();
         burnLotl();
     }
     
@@ -211,10 +202,9 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     function removeAllLiquidity () public onlyOwner {
         for(uint8 i; i < lptoken.length; i++)
         {
-            uint256 lpAmount = lptoken[i].balanceOf(address(this));
-            if(lpAmount > 0)
+            if(lptoken[i].balanceOf(address(this)) > 0)
             {
-                removeLiquidity(lptoken[i], lpAmount);
+                removeLiquidity(lptoken[i]);
             }
         }
     }
@@ -222,9 +212,8 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     // Swaps all tokens in the contract to BUSD.
     function swapAllToBUSD () public onlyOwner {
         for(uint8 i; i < tokens.length; i++){
-            uint256 tokenAmount = tokens[i].balanceOf(address(this));
-            if(tokenAmount / 1e18 > 0 && tokens[i] != IERC20(busdAddr)){
-                swapToBusd(tokens[i], tokenAmount);
+            if(tokens[i].balanceOf(address(this)) > 0 && tokens[i] != IERC20(busdAddr)){
+                swapToBusd(tokens[i]);
             }
         }
     }
@@ -233,6 +222,13 @@ contract RewardPool is Ownable, Constants, IRewardPool {
     function initiateRewards () public onlyOwner {
         chef.calculateRewardPool();
     }
+
+    function burnLotl () public onlyOwner {
+        uint256 amount = IERC20(lotlToken).balanceOf(address(this));
+        IERC20(lotlToken).transfer(burnAddr, amount);
+        emit BurnLotl(msg.sender, amount);
+    }
+    
     
     
 
