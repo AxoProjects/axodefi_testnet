@@ -72,14 +72,14 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         uint256 lastRewardBlock;     // Last block number that LOTLs distribution occurs.
         uint256 accLotlPerShare;     // Accumulated LOTLs per share, times 1e12. See below.
         uint16 depositFeeBP;        // Deposit fee in basis points.
-        uint32 totalTimeAlloc;      // Total amount of time allocation points.
+        uint64 totalTimeAlloc;      // Total amount of time allocation points.
         address []poolUser;         // Addresses of all stakes in pool.
     }
 
     // Info for the reward pool.
     // All rewards that haven't been claimed until the next reward distribution will be nulled and added to the next distribution. 
     struct Rewards {
-        uint32 totalTimeAlloc;      // Total time factor for all stakes.
+        uint64 totalTimeAlloc;      // Total time factor for all stakes.
         uint256 amountBUSD;         // BUSD to distribute among all stakers.
         uint256 amountLOTL;         // LOTL to distribute among all stakers.
         uint256 remainingLOTL;      // Remainder of LOTL.
@@ -114,7 +114,7 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
     mapping(uint8 => mapping(address => UserInfo)) public userInfo;
 
     // Total allocation points. Must be the sum of all allocation points in all pools.
-    uint32 public totalAllocPoint = 0;
+    uint64 public totalAllocPoint = 0;
 
 
     event Deposit(address indexed user, uint8 indexed pid, uint256 amount);
@@ -213,11 +213,20 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         }
     }
 
-    // 28800 blocks = 1 time factor
+    // 14400 blocks = 1 time factor
     // TEST IF DIVIDES WITHOUT REST
     function calculateTimeRewards (uint256 _stakedSince) private returns (uint256)  {
-        //return _stakedSince / 28800;
-        return _stakedSince;
+        /*
+        uint256 timeFactor = (block.number - _stakedSince) / 14400;
+        if(timeFactor == 0){
+            return 1;
+        }
+        else{
+            return timeFactor;
+        }
+        */
+        //testing
+        return block.number - _stakedSince;
     } 
 
     // Update reward variables of the given pool to be up-to-date.
@@ -452,7 +461,7 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
                 UserInfo storage user = userInfo[i+1][pool.poolUser[j]];
                 if(user.stakedSince > 0){
                     UserInfo storage rewardUser = userInfo[0][poolInfo[i].poolUser[j]];
-                    uint16 timeReward = uint16(calculateTimeRewards(user.stakedSince));
+                    uint64 timeReward = uint64(calculateTimeRewards(user.stakedSince));
                     pool.totalTimeAlloc = pool.totalTimeAlloc + timeReward;
                     rewardUser.rewardPoolShare = rewardUser.rewardPoolShare + user.amount * 1e12 / totalAllocPoint * pool.allocPoint / lpSupply * timeReward;
 
