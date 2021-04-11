@@ -17,8 +17,6 @@ import "./LotlToken.sol";
 //import "./libs/SafeBEP20.sol";
 //import "./libs/IRewardPool.sol";
 
-
-
 // Forkend and modified from GooseDefi code:
 // https://github.com/goosedefi/goose-contracts/blob/master/contracts/MasterChefV2.sol
 // MasterChef is the master of Lotl. He can make Lotl and he is a fair guy.
@@ -32,11 +30,10 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
 
     // Info of each user.
     struct UserInfo {
-        uint256 amount;                 // How many LP tokens the user has provided.
-        uint256 rewardDebt;             // Reward debt. See explanation below.
-        bool    hasStaked;              // Checks if user had already staked in pool
-        uint256 stakedSince;            // Weighted blocknumber since last stake.  
-        uint256 rewardPoolShare;        // Share of reward pool.
+        uint128 amount;                 // How many LP tokens the user has provided.
+        uint128 rewardDebt;             // Reward debt. See explanation below.
+        uint32 stakedSince;            // Weighted block.number since last stake.  
+    }
 
         //
         // We do some fancy math here. Basically, any point in time, the amount of LOTLs
@@ -51,43 +48,47 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         //   4. User's `rewardDebt` gets updated.
         //
         // In addition to that we do even more fancy stuff here, to calculate the distribution of our 7 day reward pool.
-        //  1. First of, we reserve 30% of all minted LOTL to our reward pool. ('lotlRewardPool')
+        //  1. First of, we reserve 30% of all minted LOTL to our reward pool. ('pendingRewardLotl')
         //  2. We send 90% of all taxes paid to our RewardPool contract.
         //  3. All fees will be swapped to BUSD and sent back to the MasterChef contract.
-        //  4. Then we use calculateRewardPool to calculate all rewards per share for each user and sum them up for each user across all pools he staked in.
-        //  5. rewardPerShare = 1 * pool.allocPoint * timeReward * user.amount / totalAllocPoint / lpSupply
-        //  6. Then to get your actual reward you need to withdraw your rewards before the next reward pool is distributed or else they will be burned.
+        //  4. Then we use calculateRewardPool to calculate all rewards per share for each user and sum them up for each user across all pools the user staked in.
+        //  5. for all pools rewardPerShare += rewardPerShare + adjustedUserAmount / adjustedPoolLiquidity * pool.allocPoint / totalAllocPoints  
+        //  6. Then to get your actual reward you need to withdraw your rewards before the next reward pool is distributed or else they will be used for the next reward pool.
         //  7. Rewards are paid out in the function 'withdrawRewards' and are finally calculated as follows.
-        //  8. reward = totalRewardPool * user.rewardPoolShare / totalTimeAlloc 
+        //  8. reward = totalRewardPool * user.rewardPoolShare
+
+        // Time based holding factor:
+        // Calculated by making use of the transaction blocks. 
+        // Block since last deposit event is saved
+        // Deposit/Withdraw event modifier your transaction blocks.
+        // After your initial deposit your block number is updatet with following equation:
+        // user.stakedSince = user.stakedSince + (block.number - user.stakedSince) * taxedAmount / (user.amount + taxedAmount);
+        // Withdrawin any amount >0 resets your block number to the current transaction block.
      
-
-
-                
-    }
-
     // Info of each pool.
     struct PoolInfo {
         IERC20 lpToken;             // Address of LP token contract.
         uint8 allocPoint;           // How many allocation points assigned to this pool. LOTLs to distribute per block.
-        uint256 lastRewardBlock;     // Last block number that LOTLs distribution occurs.
-        uint256 accLotlPerShare;     // Accumulated LOTLs per share, times 1e12. See below.
+        uint32 lastRewardBlock;    // Last block number that LOTLs distribution occurs.
+        uint128 accLotlPerShare;    // Accumulated LOTLs per share, times 1e12. See below.
         uint16 depositFeeBP;        // Deposit fee in basis points.
-        uint64 totalTimeAlloc;      // Total amount of time allocation points.
+        uint16 unstakingFeeBP;      // Unstaking fee in basis points.
         address []poolUser;         // Addresses of all stakes in pool.
+        uint16 totalUserStaked;    // Amount of current number of stakes in pool.
+        bool isLPPool;              // LP flag.
     }
 
     // Info for the reward pool.
     // All rewards that haven't been claimed until the next reward distribution will be nulled and added to the next distribution. 
     struct Rewards {
-        uint64 totalTimeAlloc;      // Total time factor for all stakes.
-        uint256 amountBUSD;         // BUSD to distribute among all stakers.
-        uint256 amountLOTL;         // LOTL to distribute among all stakers.
-        uint256 remainingLOTL;      // Remainder of LOTL.
-        address []poolUser;         // Addresses of all stakes in pool.
-    }
+        uint128 amountBUSD;         // BUSD to distribute among all stakers.
+        uint128 amountLOTL;         // LOTL to distribute among all stakers.
+        uint128 remainingLOTL;      // Remainder of LOTL.
+        address []poolUser;         // Addresses of all distinct stakes across all pools.
+    }    
 
     // Lotl to allocate to reward pool.
-    uint256 pendingRewardLotl; 
+    uint128 public pendingRewardLotl; 
     
     // Info of reward pool.
     Rewards public rewardInfo;
@@ -96,47 +97,45 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
     LotlToken public lotl;
 
     // Dev address.
-    address public devaddr;
+    address public devAddr;
 
     // RewardPool address.
     IRewardPool public rewardPool;
 
     
-
     // LOTL tokens created per block.
-    uint256 public lotlPerBlock;
+    uint64 public lotlPerBlock;
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
 
+    // Info of the allocated rewardPoolShare per user
+    mapping(uint16 => mapping(address => uint128)) public rewardPoolShare;
+    
     // Info of each user that stakes LP tokens.
-    // Mapping 0 is reserved for the rewardPool.
     mapping(uint8 => mapping(address => UserInfo)) public userInfo;
 
+    // Info wether a user has already staked in the platform;
+    mapping(uint8 => mapping(address => bool)) public userExists;
+
     // Total allocation points. Must be the sum of all allocation points in all pools.
-    uint64 public totalAllocPoint = 0;
+    uint16 public totalAllocPoint = 0;
 
+    // Indicator of the current reward pool iteration.
+    uint16 public currentRewardIteration = 1;
 
-    event Deposit(address indexed user, uint8 indexed pid, uint256 amount);
-    event Withdraw(address indexed user, uint8 indexed pid, uint256 amount);
-    event WithdrawReward(address indexed user, uint256 amountLotl, uint256 amountBUSD);
-    event EmergencyWithdraw(address indexed user, uint8 indexed pid, uint256 amount);
-    event SetDevAddress(address indexed user, address indexed newAddress);
+    event Deposit(address indexed user, uint8 indexed pid, uint128 amount);
+    event Withdraw(address indexed user, uint8 indexed pid, uint128 amount);
+    event WithdrawReward(address indexed user, uint128 amountLotl, uint128 amountBUSD);
+    event EmergencyWithdraw(address indexed user, uint8 indexed pid, uint128 amount);
     event SetRewardAddress(address indexed user, address indexed newAddress);
-    event UpdateMintingRate(address indexed user, uint256 lotlPerBlock);
+    event SetDevAddress(address indexed user, address indexed newAddress);
+    event UpdateMintingRate(address indexed user, uint64 lotlPerBlock);
     
-    
-
-    constructor(
-        LotlToken _lotl
-    ) public {
+    constructor(LotlToken _lotl) public {
         lotl = _lotl;
-        devaddr = msg.sender;
+        devAddr = msg.sender;
         rewardPool = IRewardPool(msg.sender);
-    }
-
-    function poolLength() external view returns (uint8) {
-        return uint8(poolInfo.length);
     }
 
     // Used to determine wether a pool has already been added.
@@ -148,10 +147,8 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         _;
     }
 
-    // TODO TEST IF ADDING TOKENS AS POOL WORKS 
     // Add a new lp to the pool. Can only be called by the owner.
-
-    function add(uint8 _allocPoint, IERC20 _lpToken, IERC20 _tokenA, IERC20 _tokenB, uint16 _depositFeeBP, bool _withUpdate, bool _isLPPool) public onlyOwner nonDuplicated(_lpToken) {
+    function add(uint8 _allocPoint, IERC20 _lpToken, IERC20 _tokenA, IERC20 _tokenB, uint16 _depositFeeBP, uint16 _unstakingFeeBP, bool _withUpdate, bool _isLPPool) public onlyOwner nonDuplicated(_lpToken) {
         require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
 
         require (_allocPoint <= 100, "add: invalid allocation points");
@@ -172,33 +169,34 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         PoolInfo memory poolToAdd;
         poolToAdd.lpToken = _lpToken;
         poolToAdd.allocPoint =  _allocPoint;
-        poolToAdd.lastRewardBlock = block.number;
+        poolToAdd.lastRewardBlock = uint32(block.number);
         poolToAdd.depositFeeBP =  _depositFeeBP;
+        poolToAdd.unstakingFeeBP = _unstakingFeeBP;
+        poolToAdd.isLPPool = _isLPPool;
         poolInfo.push(poolToAdd);
     }
 
     // View function to see pending LOTLs on frontend.
     function pendingLotl(uint8 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid + 1][_user];
+        UserInfo storage user = userInfo[_pid][_user];
+        uint32 currentBlock = uint32(block.number);
         uint256 accLotlPerShare = pool.accLotlPerShare;
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        if (block.number > pool.lastRewardBlock && lpSupply != 0) {
-            uint256 lotlReward =  (block.number - pool.lastRewardBlock) * lotlPerBlock * pool.allocPoint / totalAllocPoint;
+        uint128 lpSupply = uint128(pool.lpToken.balanceOf(address(this)));
+        if (currentBlock > pool.lastRewardBlock && lpSupply != 0) {
+            uint128 lotlReward =  lotlPerBlock * uint128((currentBlock - pool.lastRewardBlock) * pool.allocPoint  / totalAllocPoint);
             accLotlPerShare = accLotlPerShare + lotlReward * 1e12 / lpSupply;
         }
-        return accLotlPerShare * user.amount / 1e12 - user.rewardDebt;
+        return user.amount * accLotlPerShare / 1e12 - user.rewardDebt;
     }
 
     // View function to see pending rewards on frontend.
-    // TODO TEST
-    function pendingRewards(address _user) external view returns (uint256 _lotl, uint256 _busd) {
-        UserInfo storage user = userInfo[0][_user];
-        require(user.rewardPoolShare > 0, "withdraw: not good");
-        if(user.rewardPoolShare > 0){
-            uint256 busdPending = rewardInfo.amountBUSD * user.rewardPoolShare / rewardInfo.totalTimeAlloc / 1e12;
-            uint256 lotlPending = rewardInfo.amountLOTL * user.rewardPoolShare / rewardInfo.totalTimeAlloc / 1e12;
-            return (lotlPending, busdPending);
+    function pendingRewards(address _user) external view returns (uint128 _lotl, uint128 _busd) {
+        uint128 share = rewardPoolShare[currentRewardIteration-1][_user];
+        if(share > 0){
+        uint128 busdPending = rewardInfo.amountBUSD * share / 1e12;
+        uint128 lotlPending = rewardInfo.amountLOTL * share / 1e12;
+        return (lotlPending, busdPending);
         }
         else{
             return (0,0);
@@ -214,10 +212,9 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
     }
 
     // 14400 blocks = 1 time factor
-    // TEST IF DIVIDES WITHOUT REST
-    function calculateTimeRewards (uint256 _stakedSince) private returns (uint256)  {
+    function calculateTimeRewards (uint32 _stakedSince) public view returns (uint32)  {
         /*
-        uint256 timeFactor = (block.number - _stakedSince) / 14400;
+        uint32 timeFactor = (uint32(block.number) - _stakedSince) / 14400;
         if(timeFactor == 0){
             return 1;
         }
@@ -226,121 +223,121 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         }
         */
         //testing
-        return block.number - _stakedSince;
+        return uint32(block.number) - _stakedSince;
     } 
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool(uint8 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
-        if (block.number <= pool.lastRewardBlock) {
+        uint32 currentBlock = uint32(block.number);
+        if (currentBlock <= pool.lastRewardBlock) {
             return;
         }
 
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
+        uint128 lpSupply = uint128(pool.lpToken.balanceOf(address(this)));
         if (lpSupply == 0 || pool.allocPoint == 0) {
-            pool.lastRewardBlock = block.number;
+            pool.lastRewardBlock = currentBlock;
             return;
         }
 
         if(lotlPerBlock == 0){
-            pool.lastRewardBlock = block.number;
+            pool.lastRewardBlock = currentBlock;
             return;
         }
 
-        uint256 lotlReward = (block.number - pool.lastRewardBlock) * lotlPerBlock * pool.allocPoint / totalAllocPoint;
-        //TODO test minting 
-        lotl.mint(devaddr, lotlReward / 10);
+        uint128 lotlReward = lotlPerBlock * uint128((currentBlock - pool.lastRewardBlock) * pool.allocPoint / totalAllocPoint);
+        lotl.mint(devAddr, lotlReward / 10);
         pendingRewardLotl = pendingRewardLotl + lotlReward / 10 * 3;
         lotl.mint(address(this), lotlReward - lotlReward / 10);
         lotlReward = lotlReward - (lotlReward / 10 * 4);
         pool.accLotlPerShare = pool.accLotlPerShare + lotlReward * 1e12 / lpSupply;
-        pool.lastRewardBlock = block.number;
+        pool.lastRewardBlock = currentBlock;
     }
 
     // Deposit LP tokens to MasterChef for LOTL allocation.
-    function deposit(uint8 _pid, uint256 _amount) public nonReentrant {
+    function deposit(uint8 _pid, uint128 _amount) public nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid+uint8(1)][msg.sender];
-        UserInfo storage rewardUser = userInfo[0][msg.sender];
+        UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
-
+        uint32 currentBlock = uint32(block.number);
         // Save last block number as staking timestamp
-        if (user.stakedSince == 0 && _amount > 0)
-        {
-             //TODO TEST IF FIRST STACKE SETS STAKED SINCE
-            user.stakedSince = block.number;
+        if (user.stakedSince == 0 && _amount > 0){
+            user.stakedSince = currentBlock;
         }
-        
-        if (user.amount > 0) 
-        {
+        if (user.amount > 0) {
             uint256 pending = user.amount * pool.accLotlPerShare / 1e12 - user.rewardDebt;
-            if (pending > 0) 
-            {
-                safeLotlTransfer(msg.sender, pending);
+            if (pending > 0) {
+                lotl.transfer(msg.sender, pending);
             }
         } 
-        if (_amount > 0) 
-        {
-            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            uint256 taxedAmount = _amount * (1e4 - pool.depositFeeBP) / 1e4;
-
+        if (_amount > 0) {
+            pool.lpToken.transferFrom(address(msg.sender), address(this), _amount);
+            uint128 taxedAmount = _amount * (1e4 - pool.depositFeeBP) / 1e4;
             // Holding factor scaling
-            if(user.amount > 0)
-            {
-                user.stakedSince = user.stakedSince + (block.number - user.stakedSince) * taxedAmount / (user.amount + taxedAmount);
-            }
+            if(user.amount > 0){
+                user.stakedSince = uint32(user.stakedSince +  taxedAmount * (currentBlock - user.stakedSince)  / (user.amount + taxedAmount));
 
-            //TODO TEST IF PUSHING WORKS
-            if(!user.hasStaked)
-            {
+            }
+            if(!userExists[_pid+1][msg.sender]){
                 pool.poolUser.push(msg.sender);
-                user.hasStaked = true;
-
+                userExists[_pid+1][msg.sender] = true;
             }
-            if(!rewardUser.hasStaked)
-            {
+             if(!userExists[0][msg.sender]){
                 rewardInfo.poolUser.push(msg.sender);
-                rewardUser.hasStaked = true;
+                userExists[0][msg.sender] = true;
             }
-            if (pool.depositFeeBP > 0) 
-            {
-                uint256 depositFee = _amount - taxedAmount;
-                pool.lpToken.safeTransfer(devaddr, depositFee / 10);
-                pool.lpToken.safeTransfer(address(rewardPool), depositFee - depositFee / 10);
+            if (pool.depositFeeBP > 0) {
+                uint128 depositFee = _amount - taxedAmount;
+                pool.lpToken.transfer(devAddr, depositFee / 10);
+                depositFee = depositFee - depositFee / 10;
+                pool.lpToken.transfer(address(rewardPool), depositFee);
+                if(pool.isLPPool){
+                    rewardPool.removeLiquidityExternal(pool.lpToken, depositFee);
+                }
+                else{
+                    rewardPool.swapToBusdExternal(pool.lpToken, depositFee);
+                }
             } 
-
-            user.amount = user.amount + taxedAmount;
-            
+            user.amount = user.amount + taxedAmount;   
         }
         user.rewardDebt = user.amount * pool.accLotlPerShare / 1e12;
         emit Deposit(msg.sender, _pid, _amount);
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint8 _pid, uint256 _amount) public nonReentrant {
+    function withdraw(uint8 _pid, uint128 _amount) public nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid + 1][msg.sender];
+        UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(_pid);
-        uint256 pending = user.amount * pool.accLotlPerShare / 1e12 - user.rewardDebt;
-        if (pending > 0) 
-        {
-            safeLotlTransfer(msg.sender, pending);
+        uint32 currentBlock = uint32(block.number);
+        uint128 pending = user.amount * pool.accLotlPerShare / 1e12 - user.rewardDebt;
+        if (pending > 0) {
+            lotl.transfer(msg.sender, pending);
         }
-        if (_amount > 0) 
-        {
+        if (_amount > 0) {
             user.amount = user.amount - _amount;
-
-            //TODO TEST IF UNSTAKING RESETS stakedSince
-            if(user.amount > 0)
-            {
-                user.stakedSince = block.number;
+            uint128 taxedAmount = _amount;
+            if(pool.unstakingFeeBP > 0 && calculateTimeRewards(user.stakedSince) < 14){
+                taxedAmount = _amount * (1e4 - pool.unstakingFeeBP) / 1e4;
+                uint128 unstakingFee = _amount - taxedAmount;
+                pool.lpToken.transfer(devAddr, unstakingFee / 10);
+                unstakingFee = unstakingFee - unstakingFee / 10;
+                pool.lpToken.transfer(address(rewardPool), unstakingFee);
+                if(pool.isLPPool){
+                    rewardPool.removeLiquidityExternal(pool.lpToken, unstakingFee);
+                }
+                else{
+                    rewardPool.swapToBusdExternal(pool.lpToken, unstakingFee);
+                }
             }
-            else 
-            {
+            if(user.amount > 0){
+                user.stakedSince = currentBlock;
+            }
+            else {
                 user.stakedSince = 0;
             }
-            pool.lpToken.safeTransfer(address(msg.sender), _amount);
+            pool.lpToken.transfer(address(msg.sender), taxedAmount);
         }
         user.rewardDebt = user.amount * pool.accLotlPerShare / 1e12;
         emit Withdraw(msg.sender, _pid, _amount);
@@ -348,138 +345,88 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
 
     // Withdraw reward pool earnings, if there are any.
     function withdrawReward() public nonReentrant {
-        UserInfo storage user = userInfo[0][msg.sender];
-        require(user.rewardPoolShare > 0, "withdraw: not good");
-        uint256 busdPending = rewardInfo.amountBUSD * user.rewardPoolShare / rewardInfo.totalTimeAlloc / 1e12;
-        uint256 lotlPending = rewardInfo.amountLOTL * user.rewardPoolShare / rewardInfo.totalTimeAlloc / 1e12;
+        uint128 share = rewardPoolShare[currentRewardIteration-1][msg.sender];
+        require(share > 0, "withdraw: not good");
+        uint128 busdPending = rewardInfo.amountBUSD * share / 1e12;
+        uint128 lotlPending = rewardInfo.amountLOTL * share / 1e12;
         rewardInfo.remainingLOTL = rewardInfo.remainingLOTL - lotlPending;
-        safeLotlTransfer(msg.sender, lotlPending);
-        safeBusdTransfer(msg.sender, busdPending);
-        user.rewardPoolShare = 0;
+        lotl.transfer(msg.sender, lotlPending);
+        IERC20(busdAddr).transfer(msg.sender, busdPending);
+        share = 0;
         emit WithdrawReward(msg.sender, lotlPending, busdPending);
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint8 _pid) public nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid + 1][msg.sender];
-        uint256 amount = user.amount;
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        uint128 amount = user.amount;
         user.amount = 0;
         user.rewardDebt = 0;
-        pool.lpToken.safeTransfer(address(msg.sender), amount);
+        pool.lpToken.transfer(address(msg.sender), amount);
         emit EmergencyWithdraw(msg.sender, _pid, amount);
     }
 
-    // Safe LOTL transfer function, just in case if rounding error causes pool to not have enough LOTLs.
-    function safeLotlTransfer(address _to, uint256 _amount) internal {
-        uint256 lotlBal = lotl.balanceOf(address(this));
-        bool transferSuccess = false;
-        if (_amount > lotlBal) {
-            transferSuccess = lotl.transfer(_to, lotlBal);
-        } else {
-            transferSuccess = lotl.transfer(_to, _amount);
-        }
-        require(transferSuccess, "safeLotlTransfer: transfer failed");
-    }
-
-
-    // Safe BUSD transfer function, just in case if rounding error causes pool to not have enough BUSDs.
-    function safeBusdTransfer(address _to, uint256 _amount) internal {
-        uint256 busdBal = IERC20(busdAddr).balanceOf(address(this));
-        bool transferSuccess = false;
-        if (_amount > busdBal) {
-            transferSuccess = IERC20(busdAddr).transfer(_to, busdBal);
-        } else {
-            transferSuccess = IERC20(busdAddr).transfer(_to, _amount);
-        }
-        require(transferSuccess, "safeBusdTransfer: transfer failed");
-    }
-
-
-    // Update dev address by the previous dev.
-    function setDevAddress(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
-        emit SetDevAddress(msg.sender, _devaddr);
-    }
-
-     // One time set reward address.
+    // One time set reward address.
     function setRewardAddress(address _rewardAddress) public{
         require(msg.sender == address(rewardPool), "rewards: wha?");
         rewardPool = IRewardPool(_rewardAddress);
         emit SetRewardAddress(msg.sender, _rewardAddress);
     }
 
-   
+    // One time set reward address.
+    function setDevAddress(address _devAddress) public{
+        require(msg.sender == address(devAddr), "rewards: wha?");
+        devAddr = _devAddress;
+        emit SetDevAddress(msg.sender, _devAddress);
+    }
+
     // Minting rate will be adjusted every 28800*(8/MintingRate) Blocks
     function updateMintingRate() public onlyOwner {
         massUpdatePools();
+        if(lotlPerBlock == 0){
+            lotlPerBlock = 2 * 1e18;
+            return;
+        }
         lotlPerBlock = lotlPerBlock / 2;
         emit UpdateMintingRate(msg.sender, lotlPerBlock);
     }
 
-
-    // Start the block rewards.
-    function startMinting() public onlyOwner {
-        if(lotlPerBlock == 0)
-        {
-        massUpdatePools();
-        lotlPerBlock = 4 * 1e18;
-        }
-    }
-    
-
     // Calculates all rewardShares for all users that are registered as stakers. 
-    /*  TODO TEST
-        1. Burning works
-        2. rewardPoolShare = 0 for loop
-        3. totalTimeALlocation rewardPool
-        4. rewardPoolShare formula correct
-        5. lotl and busd reward pool correct
-    */
-
     function calculateRewardPool() external override {
-        //require(msg.sender == rewardAddress, "rewards: wha?");
+        require(msg.sender == address(rewardPool), "rewards: wha?");
         uint8 length = uint8(poolInfo.length);
-        uint32 rewardUserlength = uint32(rewardInfo.poolUser.length);
-        rewardInfo.amountBUSD =IERC20(busdAddr).balanceOf(address(this));
+        uint32 totalUserLength = uint32(rewardInfo.poolUser.length);
+        rewardInfo.amountBUSD = uint128(IERC20(busdAddr).balanceOf(address(this)));
         rewardInfo.amountLOTL = pendingRewardLotl + rewardInfo.remainingLOTL;
         rewardInfo.remainingLOTL = rewardInfo.amountLOTL;
         pendingRewardLotl = 0;
-        rewardInfo.totalTimeAlloc = 0;
-        for(uint32 i; i< rewardUserlength; i++){
-            UserInfo storage user = userInfo[0][rewardInfo.poolUser[i]];
-            user.rewardPoolShare = 0;
-        }
-
-        for (uint8 i=0; i < length; i++){
-            PoolInfo storage pool = poolInfo[i];
-            uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-            uint32 userLength = uint32(pool.poolUser.length);
-            poolInfo[i].totalTimeAlloc = 0;
-            for(uint32 j; j< userLength; j++){
-                UserInfo storage user = userInfo[i+1][pool.poolUser[j]];
-                if(user.stakedSince > 0){
-                    UserInfo storage rewardUser = userInfo[0][poolInfo[i].poolUser[j]];
-                    uint64 timeReward = uint64(calculateTimeRewards(user.stakedSince));
-                    pool.totalTimeAlloc = pool.totalTimeAlloc + timeReward;
-                    rewardUser.rewardPoolShare = rewardUser.rewardPoolShare + user.amount * 1e12 / totalAllocPoint * pool.allocPoint / lpSupply * timeReward;
-
+        uint32 currentBlock = uint32(block.number);
+        uint128[] memory adjustedLiquidity = new uint128[](length);
+        for(uint8 i=0; i < length; i++){
+            PoolInfo memory pool = poolInfo[i];
+            adjustedLiquidity[i] = 0;
+            uint16 userLength = uint16(pool.poolUser.length);
+                for(uint32 j=0; j < userLength; j++){
+                    UserInfo memory user = userInfo[i][pool.poolUser[j]];
+                    if(user.stakedSince > 0){
+                        adjustedLiquidity[i] = adjustedLiquidity[i] + user.amount * 1e12 * (currentBlock - user.stakedSince);
+                    }
                 }
             }
-            rewardInfo.totalTimeAlloc = rewardInfo.totalTimeAlloc + pool.totalTimeAlloc;
+        for(uint32 i=0; i < totalUserLength; i++){
+            address rewardUser = rewardInfo.poolUser[i];
+            uint128 adjustedAmount = 0;
+            for(uint8 j=0; j < length; j++){
+                UserInfo memory user = userInfo[j][rewardUser];
+                if(user.stakedSince > 0){
+                    PoolInfo memory pool = poolInfo[j];
+                    adjustedAmount = adjustedAmount + user.amount * 1e12 * (currentBlock - user.stakedSince) / adjustedLiquidity[j] * pool.allocPoint / totalAllocPoint;
+                }
+            }
+            rewardPoolShare[currentRewardIteration][rewardUser] = adjustedAmount;
         }
+        currentRewardIteration++;
+        rewardPool.resetBurnCycle();
     }
-
-    function currentHoldingFactor(uint8 _pid, address _user) public view returns(uint256 holdFactor){
-        UserInfo storage user = userInfo[_pid][_user];
-        if(user.stakedSince > 0)
-        {
-            return block.number - user.stakedSince;
-        }
-        else return 0;
-
-    }
-
-
 }

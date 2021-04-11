@@ -7,6 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IRewardPool{
     function addLpToken(IERC20 _lpToken, IERC20 _tokenA, IERC20 _tokenB, bool _isLPToken) external;
-    function processFees() external;
-    function setRouterPath(address inputToken, address outputToken, address[] calldata _path, bool overwrite) external;
+    function resetBurnCycle() external;
+    function removeLiquidityExternal (IERC20 _lpToken, uint256 _amount) external;
+    function swapToBusdExternal(IERC20 _token,  uint256 _amount) external;
+    
+    
 }

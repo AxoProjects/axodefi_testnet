@@ -16,7 +16,6 @@ abstract contract Constants {
     address constant gnyAddr = 0xe4A4Ad6E0B773f47D28f548742a23eFD73798332;
     address constant worldAddr = 0x31FFbe9bf84b4d9d02cd40eCcAB4Af1E2877Bbc6;
     address constant vaiAddr = 0x4bd17003473389a42daf6a0a729f6fdb328bbbd7;
-    address constant bethAddr = 0x250632378e573c6be1ac2f97fcdf00515d0aa91b;
     address constant ustAddr = 0x23396cf899ca06c4472205fc903bdb4de249d6fc;
     address constant routerAddr = 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F;
     */
