@@ -304,6 +304,7 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         emit Deposit(msg.sender, _pid, _amount);
     }
 
+    
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint8 _pid, uint128 _amount) public nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
@@ -346,12 +347,13 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
     // Withdraw reward pool earnings, if there are any.
     function withdrawReward() public nonReentrant {
         uint128 share = rewardPoolShare[currentRewardIteration-1][msg.sender];
-        require(share > 0, "withdraw: not good");
+        require(share > 0, "withdraw: no reward share");
         uint128 busdPending = rewardInfo.amountBUSD * share / 1e12;
         uint128 lotlPending = rewardInfo.amountLOTL * share / 1e12;
+        require (lotlPending <= rewardInfo.remainingLOTL && busdPending <= IERC20(busdAddr).balanceOf(address(this)), "withdraw: not enough funds in pool");
         rewardInfo.remainingLOTL = rewardInfo.remainingLOTL - lotlPending;
-        lotl.transfer(msg.sender, lotlPending);
         IERC20(busdAddr).transfer(msg.sender, busdPending);
+        lotl.transfer(msg.sender, lotlPending);
         share = 0;
         emit WithdrawReward(msg.sender, lotlPending, busdPending);
     }
@@ -366,6 +368,7 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
         pool.lpToken.transfer(address(msg.sender), amount);
         emit EmergencyWithdraw(msg.sender, _pid, amount);
     }
+    
 
     // One time set reward address.
     function setRewardAddress(address _rewardAddress) public{
@@ -395,6 +398,7 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
     // Calculates all rewardShares for all users that are registered as stakers. 
     function calculateRewardPool() external override {
         require(msg.sender == address(rewardPool), "rewards: wha?");
+
         uint8 length = uint8(poolInfo.length);
         uint32 totalUserLength = uint32(rewardInfo.poolUser.length);
         rewardInfo.amountBUSD = uint128(IERC20(busdAddr).balanceOf(address(this)));
@@ -410,7 +414,7 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
                 for(uint32 j=0; j < userLength; j++){
                     UserInfo memory user = userInfo[i][pool.poolUser[j]];
                     if(user.stakedSince > 0){
-                        adjustedLiquidity[i] = adjustedLiquidity[i] + user.amount * 1e12 * (currentBlock - user.stakedSince);
+                        adjustedLiquidity[i] = adjustedLiquidity[i] + user.amount * (currentBlock - user.stakedSince);
                     }
                 }
             }
@@ -419,11 +423,16 @@ contract MasterChef is Ownable, ReentrancyGuard, IMasterChef, Constants {
             uint128 adjustedAmount = 0;
             for(uint8 j=0; j < length; j++){
                 UserInfo memory user = userInfo[j][rewardUser];
+                if(user.amount > 0){
+                    wasAmount = true;
+                }
                 if(user.stakedSince > 0){
+                    wasStakedSince = true;
                     PoolInfo memory pool = poolInfo[j];
                     adjustedAmount = adjustedAmount + user.amount * 1e12 * (currentBlock - user.stakedSince) / adjustedLiquidity[j] * pool.allocPoint / totalAllocPoint;
                 }
             }
+ 
             rewardPoolShare[currentRewardIteration][rewardUser] = adjustedAmount;
         }
         currentRewardIteration++;
